@@ -4,7 +4,7 @@
 // completion is tracked per-day in `completions` (date -> ISO timestamp).
 // A one-time task is completed via `done` / `doneAt`.
 
-import { addDays, dateToISO, isPast, todayStr } from './datetime';
+import { addDays, dateToISO, isPast, todayStr } from './datetime.js';
 
 export const PRIORITIES = {
   high: { label: 'High', color: '#f87171' },
@@ -111,4 +111,88 @@ export function weekInfo(tasks, refDate, now = new Date()) {
     done += info.done;
   }
   return { total, done };
+}
+
+// --- Import sanitization ---
+// Backup files are untrusted: shape-validate and coerce everything before it
+// reaches state, so a malformed file can't crash the UI or poison rendering.
+
+const PRIORITIES_OK = ['high', 'medium', 'low'];
+const REMIND_OK = [0, 5, 10, 15, 30, 60];
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+const ISO_TIME = /^(\d{2}):(\d{2})$/;
+const MAX_TASKS = 2000;
+const MAX_NOTES = 1000;
+
+// Range-checked (not just shape-checked): 2026-13-40 must be rejected.
+function isValidDateStr(s) {
+  const m = ISO_DATE.exec(s);
+  if (!m) return false;
+  const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+  const dt = new Date(y, mo - 1, d);
+  return dt.getFullYear() === y && dt.getMonth() + 1 === mo && dt.getDate() === d;
+}
+
+function isValidTimeStr(s) {
+  const m = ISO_TIME.exec(s);
+  return !!m && Number(m[1]) <= 23 && Number(m[2]) <= 59;
+}
+
+function cleanCompletions(raw) {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [k, v] of Object.entries(raw)) {
+    if (isValidDateStr(k) && typeof v === 'string') out[k] = v;
+  }
+  return out;
+}
+
+export function normalizeImport(data) {
+  const out = { tasks: [], notes: [], settings: null };
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return out;
+
+  if (Array.isArray(data.tasks)) {
+    for (const t of data.tasks) {
+      if (out.tasks.length >= MAX_TASKS) break;
+      if (!t || typeof t !== 'object') continue;
+      if (typeof t.id !== 'string' || !t.id) continue;
+      if (typeof t.title !== 'string' || !t.title.trim()) continue;
+      if (!isValidDateStr(t.date || '') || !isValidTimeStr(t.time || '')) continue;
+      out.tasks.push({
+        id: t.id.slice(0, 64),
+        title: t.title.trim().slice(0, 200),
+        desc: typeof t.desc === 'string' ? t.desc.slice(0, 2000) : '',
+        date: t.date,
+        time: t.time,
+        priority: PRIORITIES_OK.includes(t.priority) ? t.priority : 'medium',
+        remindBefore: REMIND_OK.includes(Number(t.remindBefore)) ? Number(t.remindBefore) : 10,
+        repeat: t.repeat === 'daily' ? 'daily' : 'none',
+        color: typeof t.color === 'string' ? t.color : 'blue',
+        createdAt: typeof t.createdAt === 'string' ? t.createdAt : new Date().toISOString(),
+        done: !!t.done,
+        doneAt: typeof t.doneAt === 'string' ? t.doneAt : null,
+        completions: cleanCompletions(t.completions),
+      });
+    }
+  }
+
+  if (Array.isArray(data.notes)) {
+    for (const n of data.notes) {
+      if (out.notes.length >= MAX_NOTES) break;
+      if (!n || typeof n !== 'object') continue;
+      if (typeof n.id !== 'string' || !n.id) continue;
+      out.notes.push({
+        id: n.id.slice(0, 64),
+        title: typeof n.title === 'string' && n.title.trim() ? n.title.trim().slice(0, 200) : 'Untitled note',
+        content: typeof n.content === 'string' ? n.content.slice(0, 20000) : '',
+        createdAt: typeof n.createdAt === 'string' ? n.createdAt : new Date().toISOString(),
+        updatedAt: typeof n.updatedAt === 'string' ? n.updatedAt : new Date().toISOString(),
+      });
+    }
+  }
+
+  if (data.settings && typeof data.settings === 'object' && !Array.isArray(data.settings)) {
+    out.settings = { sound: data.settings.sound !== false };
+  }
+  return out;
 }

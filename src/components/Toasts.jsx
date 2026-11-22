@@ -57,7 +57,7 @@ export function toastFromAlert(f) {
 export default function Toasts({ toasts, onDismiss, onDone, onSnooze }) {
   if (!toasts.length) return null;
   return (
-    <div className="toast-stack">
+    <div className="toast-stack" role="alert" aria-live="assertive">
       {toasts.map((t) => (
         <Toast key={t.id} t={t} onDismiss={onDismiss} onDone={onDone} onSnooze={onSnooze} />
       ))}

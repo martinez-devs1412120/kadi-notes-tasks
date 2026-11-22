@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStored, uid } from './lib/storage';
 import { todayStr, fmtDate, fmtTime12, timeUntil, dateToISO } from './lib/datetime';
-import { toggleInstance, countOverdue, instancesOn, MIN } from './lib/tasks';
-import { checkAlarms, playChime, initAudio } from './lib/alarms';
+import { toggleInstance, countOverdue, instancesOn, MIN, normalizeImport } from './lib/tasks';
+import { checkAlarms, playChime, initAudio, pruneTaskAlerts } from './lib/alarms';
 import Icon from './components/icons';
 import TodayView from './components/TodayView';
 import TasksView from './components/TasksView';
@@ -43,10 +43,30 @@ export default function App() {
 
   const sound = settings.sound !== false;
 
-  // Keep relative times ("in 5 min", "overdue") fresh.
+  // Keep relative times and alarms fresh. A Web Worker drives the tick so
+  // background tabs still get checked (page timers are throttled/allowed to
+  // stall in hidden tabs); a plain interval runs as fallback.
   useEffect(() => {
+    let worker = null;
+    try {
+      const code = 'setInterval(() => postMessage(0), 15000);';
+      worker = new Worker(URL.createObjectURL(new Blob([code], { type: 'text/javascript' })));
+      worker.onmessage = () => setTick((x) => x + 1);
+    } catch {
+      /* workers unavailable -- interval fallback below still works */
+    }
     const id = setInterval(() => setTick((x) => x + 1), 20000);
-    return () => clearInterval(id);
+    // Catch up immediately when the tab comes back to the foreground
+    // (after sleep, tab switch, or mobile app resume).
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') setTick((x) => x + 1);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(id);
+      worker?.terminate();
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   useEffect(() => initAudio(), []);
@@ -146,15 +166,24 @@ export default function App() {
 
   // --- Task & note CRUD ---
   const saveTask = (task) => {
-    setTasks((ts) => {
-      const i = ts.findIndex((x) => x.id === task.id);
-      if (i >= 0) {
-        const c = [...ts];
-        c[i] = task;
-        return c;
+    const existing = tasks.find((x) => x.id === task.id);
+    if (existing) {
+      // Schedule changed -> re-arm alarms for this task (prune its alert
+      // log and snoozes) so the new time actually rings.
+      const scheduleChanged =
+        existing.date !== task.date ||
+        existing.time !== task.time ||
+        existing.repeat !== task.repeat ||
+        existing.remindBefore !== task.remindBefore;
+      if (scheduleChanged) {
+        const pruned = pruneTaskAlerts(alertLog, snoozes, task.id);
+        if (pruned.log !== alertLog) setAlertLog(pruned.log);
+        if (pruned.snoozes !== snoozes) setSnoozes(pruned.snoozes);
       }
-      return [...ts, task];
-    });
+      setTasks((ts) => ts.map((x) => (x.id === task.id ? task : x)));
+    } else {
+      setTasks((ts) => [...ts, task]);
+    }
     setTaskModal(null);
   };
 
@@ -190,10 +219,11 @@ export default function App() {
     setNoteModal(null);
   };
 
-  const importBackup = (data) => {
+  const importBackup = (rawData) => {
+    const data = normalizeImport(rawData);
     setTasks(data.tasks);
     setNotes(data.notes);
-    if (data.settings) setSettings(data.settings);
+    if (data.settings) setSettings((s) => ({ ...s, ...data.settings }));
     setShowSettings(false);
   };
 

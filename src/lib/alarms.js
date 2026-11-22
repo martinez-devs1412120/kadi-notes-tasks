@@ -5,12 +5,26 @@
 // Each alert fires once per task/day/stage (tracked in alertLog),
 // except "due" which can be re-armed by snoozing.
 
-import { dateToISO, todayStr } from './datetime';
-import { isInstanceDone, MIN } from './tasks';
+import { dateToISO, todayStr } from './datetime.js';
+import { isInstanceDone, MIN } from './tasks.js';
 
-export function checkAlarms(tasks, { alertLog = {}, snoozes = {} }, onAlert) {
-  const now = new Date();
+const PRUNE_AFTER_MS = 14 * 24 * 60 * MIN; // alertLog entries older than 14d
+const OVERDUE_CAP_PER_CYCLE = 5;           // max overdue toasts per check
+
+function pruneStale(log, now) {
+  let changed = false;
+  const out = {};
+  for (const [key, iso] of Object.entries(log)) {
+    const ts = new Date(iso).getTime();
+    if (!isNaN(ts) && now.getTime() - ts <= PRUNE_AFTER_MS) out[key] = iso;
+    else changed = true;
+  }
+  return { log: changed ? out : log, changed };
+}
+
+export function checkAlarms(tasks, { alertLog = {}, snoozes = {}, now = new Date() }, onAlert) {
   const today = todayStr(now);
+  const { log: base, changed: pruned } = pruneStale(alertLog, now);
   const fired = [];
 
   for (const t of tasks) {
@@ -40,19 +54,52 @@ export function checkAlarms(tasks, { alertLog = {}, snoozes = {} }, onAlert) {
 
       for (const stage of stages) {
         const key = `${sk}|${stage}`;
-        if (alertLog[key]) continue;
+        if (base[key] || alertLog[key]) continue;
         fired.push({ key, stage, task: t, date, dueAt: eff });
       }
     }
   }
 
-  if (!fired.length) return alertLog;
+  // Cap overdue toasts per cycle (oldest due first); capped ones are still
+  // logged so they surface in the overdue banner instead of spamming toasts.
+  let toastable = fired;
+  const overdue = fired.filter((f) => f.stage === 'overdue');
+  if (overdue.length > OVERDUE_CAP_PER_CYCLE) {
+    const dropped = [...overdue]
+      .sort((a, b) => a.dueAt - b.dueAt)
+      .slice(0, overdue.length - OVERDUE_CAP_PER_CYCLE);
+    const droppedKeys = new Set(dropped.map((f) => f.key));
+    toastable = fired.filter((f) => !droppedKeys.has(f.key));
+  }
 
-  const next = { ...alertLog };
+  const next = { ...base };
   const stamp = now.toISOString();
   for (const f of fired) next[f.key] = stamp;
-  onAlert(fired);
+
+  if (fired.length) onAlert(toastable);
+  if (!fired.length && !pruned) return alertLog;
   return next;
+}
+
+// Drop all alert/snooze state for one task -- used when its schedule is
+// edited, so changed times re-alarm instead of staying silent.
+export function pruneTaskAlerts(alertLog, snoozes, taskId) {
+  const log = {};
+  let logChanged = false;
+  for (const [key, val] of Object.entries(alertLog)) {
+    if (key.startsWith(`${taskId}|`)) { logChanged = true; continue; }
+    log[key] = val;
+  }
+  const sn = {};
+  let snChanged = false;
+  for (const [key, val] of Object.entries(snoozes)) {
+    if (key.startsWith(`${taskId}|`)) { snChanged = true; continue; }
+    sn[key] = val;
+  }
+  return {
+    log: logChanged ? log : alertLog,
+    snoozes: snChanged ? sn : snoozes,
+  };
 }
 
 // --- Sound ---

@@ -11,10 +11,23 @@ export function nowTime(d = new Date()) {
 }
 
 // Combine "YYYY-MM-DD" + "HH:MM" into a local Date, or null when invalid.
+// Strict: rejects impossible dates like 2026-02-30 (JS would silently roll
+// them over to the next month).
 export function dateToISO(dateStr, timeStr) {
   if (!dateStr || !timeStr) return null;
+  const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  const tm = /^(\d{2}):(\d{2})$/.exec(timeStr);
+  if (!dm || !tm) return null;
   const d = new Date(`${dateStr}T${timeStr}`);
-  return isNaN(d.getTime()) ? null : d;
+  if (isNaN(d.getTime())) return null;
+  // Round-trip the calendar parts; time parts are not compared so DST
+  // shifts don't reject legitimate times.
+  if (
+    d.getFullYear() !== Number(dm[1]) ||
+    d.getMonth() + 1 !== Number(dm[2]) ||
+    d.getDate() !== Number(dm[3])
+  ) return null;
+  return d;
 }
 
 export function isPast(dateStr, timeStr, now = new Date()) {
