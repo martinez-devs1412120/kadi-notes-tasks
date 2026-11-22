@@ -172,10 +172,9 @@ export default function MonitorView({ tasks }) {
                   ? <span className="tag info">pending</span>
                   : <span className="tag info">upcoming</span>;
             return (
-              <div key={task.id} className="hist-row">
+              <div key={task.id} className="hist-row" style={{ '--tc': colorHex(task.color || autoColor(task.id)) }}>
                 <div>
                   <div className="hist-title">
-                    <span className="hist-swatch" style={{ '--tc': colorHex(task.color || autoColor(task.id)) }} />
                     {task.title} {task.repeat === 'daily' && <Icon name="repeat" size={11} />}
                   </div>
                   <div className="hist-sub">{task.time}</div>

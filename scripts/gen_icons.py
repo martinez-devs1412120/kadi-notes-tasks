@@ -56,16 +56,17 @@ def make(size):
         d_out = r - math.hypot(nx - cx, ny - cy)  # >0 inside the shape
         alpha = clamp(d_out / feather + 0.5)
         # flat brand background (single color, no gradient)
-        bg = (37, 109, 81)  # deep green accent
-        # white check mark: two stroke segments
+        bg = (215, 243, 90)  # lime accent
+        # dark check mark: two stroke segments
         w = 0.075
         d = min(
             seg_dist(nx, ny, 0.28, 0.53, 0.44, 0.68),
             seg_dist(nx, ny, 0.44, 0.68, 0.73, 0.36),
         )
         cover = clamp((w / 2 - d) / feather + 0.5)
+        dark = (25, 24, 19)
         px_out = tuple(
-            int(bg[i] + (255 - bg[i]) * cover) for i in range(3)
+            int(bg[i] + (dark[i] - bg[i]) * cover) for i in range(3)
         )
         return (*px_out, int(alpha * 255))
 

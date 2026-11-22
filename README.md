@@ -49,17 +49,20 @@ npm run preview # serves the built app
 
 ## Design system
 
-The UI follows a deliberate set of constraints (to avoid generic AI-generated styling):
+The UI follows the "color block" style (v4) with deliberate constraints:
 
-- **Palette**: one neutral scale, one app accent (deep green), semantic state colors,
-  plus a **per-task color palette** (8 hues, `src/lib/palette.js`) — each task owns a
-  color used on its check, time and history swatch, HabitKit-style.
-- **Type**: Fraunces Variable (serif display) + Inter Variable (body), both self-hosted;
-  fixed scale, tabular numerals for times/counts, uppercase micro-labels.
+- **Palette**: cream light theme / charcoal dark theme, one **lime accent**
+  (`#d7f35a`), plus a **per-task pastel palette** (8 hues, `src/lib/palette.js`)
+  — each task's color is used as the **full card fill** with black text,
+  HabitKit/schedule-app style.
+- **Type**: Inter Variable only (self-hosted), bold tight-tracked numerals,
+  uppercase micro-labels, tabular numerals for times/counts.
 - **Icons**: inline stroke SVG set (`src/components/icons.jsx`) — no emoji in the UI.
-- **Texture & depth**: subtle paper-grain noise on the background, layered soft
-  shadows, tinted hero/calendar fills — depth with restraint, no glow effects.
-- **Motion**: small and purposeful only (check pop, toast slide, row/figure hovers).
+- **Components**: charcoal stat panels with lime values, pill chips for filters
+  and metadata, white meta-pills on colored cards, dot-grid heatmap.
+- **Every color maps to a state** — task color, done, overdue, calendar
+  completion ratio. No decorative color, no gradients.
+- **Motion**: small and purposeful only (check pop, toast slide, hover lifts).
 - **Themes**: light and dark from the same token set (`prefers-color-scheme`).
 
 ## Project layout

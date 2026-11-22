@@ -1,15 +1,15 @@
-// Per-task accent palette (HabitKit-style: each task owns a color that
-// identifies it across checks, rows and calendars).
+// Per-task pastel palette: each task owns a color used as its FULL CARD
+// fill (color-block style) -- black text sits on every fill.
 
 export const COLORS = [
-  { id: 'violet', hex: '#8b7cf6' },
-  { id: 'blue', hex: '#5ea2f7' },
-  { id: 'cyan', hex: '#4cc9e8' },
-  { id: 'green', hex: '#4fae7d' },
-  { id: 'lime', hex: '#9dcf4e' },
-  { id: 'amber', hex: '#e8a53d' },
-  { id: 'orange', hex: '#e0794a' },
-  { id: 'rose', hex: '#e56a8a' },
+  { id: 'violet', hex: '#c7c2f4' },
+  { id: 'blue', hex: '#a9c7f5' },
+  { id: 'cyan', hex: '#9ed9e6' },
+  { id: 'green', hex: '#a8d9b4' },
+  { id: 'lime', hex: '#d6ec9c' },
+  { id: 'amber', hex: '#f6d389' },
+  { id: 'orange', hex: '#f4ae8a' },
+  { id: 'rose', hex: '#f0b9c8' },
 ];
 
 export function colorHex(id) {
