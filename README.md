@@ -1,0 +1,86 @@
+# KADI — Notes & Tasks
+
+A personal notes + to-do app with scheduled alarms and daily completion tracking.
+Built with React + Vite as a **PWA**, so it works as a desktop app (Windows/Mac/Linux)
+and a mobile app (Android/iOS) from a single codebase. All data stays on your device.
+
+**Live:** https://kadi-5v7e.zai-ai.site (deployed via ZCode Sites; redeploy with
+`npm run build`, then refresh `.zcode-site/stage/dist` and run
+`zcode-site deploy .zcode-site/stage`.)
+
+## Run it
+
+```bash
+npm install     # first time only
+npm run dev     # development server -> http://localhost:5173
+```
+
+Production build:
+
+```bash
+npm run build   # outputs dist/
+npm run preview # serves the built app
+```
+
+## Install as an app
+
+- **Desktop:** open the app in Chrome/Edge → click **⬇️ Install app** in the header
+  (or the install icon in the address bar).
+- **Android:** open the app in Chrome → menu → **Add to Home screen**.
+- **iOS:** open in Safari → Share → **Add to Home Screen**.
+
+## Features
+
+| Area | What it does |
+|------|--------------|
+| 📝 **Notes** | Create / edit / delete notes, with search. |
+| ✅ **Tasks** | Title + details, pick a **date & time**, priority, reminder lead time, optional **daily repeat**. |
+| ⏰ **Alarms** | "Coming up" (before), "Time!" (at), "Overdue" (after) — OS notification + sound + in-app popup with **Done** and **Snooze 5m**. |
+| 📊 **Monitor** | HabitKit-style **dot-grid heatmap** (18 weeks of daily completion), Monday-first month calendar with completion dots, per-day drill-down, streaks, weekly progress. |
+| 💾 **Data** | Stored in browser localStorage; export / import JSON backups from ⚙️ Settings. |
+
+## How alarms work
+
+- Click the 🔔 button (or enable in Settings) to allow OS notifications.
+- Alarms fire **while the app is open or installed and running** — the alarm engine
+  re-checks every 20 seconds. This is the standard web-app model; true background
+  push would require a notification server and can be added later.
+- If OS notifications are blocked, in-app popups + sound still work.
+
+## Design system
+
+The UI follows a deliberate set of constraints (to avoid generic AI-generated styling):
+
+- **Palette**: one neutral scale, one app accent (deep green), semantic state colors,
+  plus a **per-task color palette** (8 hues, `src/lib/palette.js`) — each task owns a
+  color used on its check, time and history swatch, HabitKit-style.
+- **Type**: Fraunces Variable (serif display) + Inter Variable (body), both self-hosted;
+  fixed scale, tabular numerals for times/counts, uppercase micro-labels.
+- **Icons**: inline stroke SVG set (`src/components/icons.jsx`) — no emoji in the UI.
+- **Texture & depth**: subtle paper-grain noise on the background, layered soft
+  shadows, tinted hero/calendar fills — depth with restraint, no glow effects.
+- **Motion**: small and purposeful only (check pop, toast slide, row/figure hovers).
+- **Themes**: light and dark from the same token set (`prefers-color-scheme`).
+
+## Project layout
+
+```
+src/
+  App.jsx              state hub, alarm loop, install prompt
+  lib/
+    datetime.js        date/time helpers (local time)
+    storage.js         localStorage-backed useState + helpers
+    tasks.js           task model, instances, completion toggling
+    alarms.js          alarm engine (upcoming/due/overdue) + chimes
+  components/
+    TodayView.jsx      greeting, progress, overdue banner, next-up
+    TasksView.jsx      filters (Today/Upcoming/Overdue/Done/All) + search
+    NotesView.jsx      note cards + search
+    MonitorView.jsx    calendar heatmap, stats, drill-down, chart
+    TaskModal.jsx      add/edit task form
+    NoteModal.jsx      add/edit note
+    SettingsModal.jsx  notifications, sound, backup/restore
+    Toasts.jsx         in-app alert popups
+    TaskRow.jsx        shared task row
+scripts/gen_icons.py  regenerates the PWA icons (pure-stdlib PNG writer)
+```
