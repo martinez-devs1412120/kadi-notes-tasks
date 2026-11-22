@@ -4,9 +4,9 @@ A personal notes + to-do app with scheduled alarms and daily completion tracking
 Built with React + Vite as a **PWA**, so it works as a desktop app (Windows/Mac/Linux)
 and a mobile app (Android/iOS) from a single codebase. All data stays on your device.
 
-**Live:** https://kadi-5v7e.zai-ai.site (deployed via ZCode Sites; redeploy with
-`npm run build`, then refresh `.zcode-site/stage/dist` and run
-`zcode-site deploy .zcode-site/stage`.)
+**Live:** https://martinez-devs1412120.github.io/kadi-notes-tasks/
+GitHub Pages auto-deploys on every push to `main` (see
+`.github/workflows/deploy.yml`). The build uses base `/kadi-notes-tasks/`.
 
 ## Run it
 
